@@ -23,12 +23,21 @@ dp = Dispatcher()
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     await add_user(message.from_user.id)
-    await message.answer(
-        "✅ Вы подписаны на уведомления о новых слотах для экзамена на водительское удостоверение.\n\n"
-        "Чтобы вручную проверить доступные даты, используйте команду /slots."
-    )
 
-    # Отправим сразу актуальные слоты
+    # отправка локальной картинки
+    with open("welcome.jpg", "rb") as photo:
+        await bot.send_photo(message.chat.id, photo, caption=(
+            "👋 <b>Добро пожаловать маленькое пони!</b>\n\n"
+            "Ты подписалась на уведомления о новых слотах для экзамена на водительское удостоверение.\n\n"
+            "📅 Используйте команду /slots чтобы вручную проверить доступные даты."
+            "Хороших погод и подкованных копытц!"
+        ))
+
+    # лог
+    users = await get_all_users()
+    print(f"[DEBUG] Зарегистрированные пользователи: {users}")
+
+    # отправим актуальные слоты
     initial_data = await get_initial_slots()
     await message.answer(f"📅 <b>Актуальные слоты:</b>\n\n{initial_data}")
 
