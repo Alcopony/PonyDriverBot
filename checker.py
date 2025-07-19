@@ -21,7 +21,19 @@ async def fetch_slots(url):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             data = await response.json()
-            return {(d['ExamDate'], d['FreePlaceCount']) for d in data}
+
+            # автоопределение формата
+            slots = set()
+            for item in data:
+                if "ExamDate" in item:  # старый формат
+                    slots.add((item["ExamDate"], item["FreePlaceCount"]))
+                elif "bookingDate" in item:  # новый формат
+                    if item.get("bookingDateStatus") == 1:
+                        # преобразуем "19-08-2025" -> datetime -> ISO string
+                        dt = datetime.strptime(item["bookingDate"], "%d-%m-%Y")
+                        iso = dt.strftime("%Y-%m-%dT00:00:00")
+                        slots.add((iso, 1))  # предполагаем, что есть хотя бы 1 место
+            return slots
 
 async def get_initial_slots() -> str:
     global previous_slots
