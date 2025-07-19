@@ -27,11 +27,18 @@ async def get_initial_slots() -> str:
     global previous_slots
     blocks = []
     for city, url in CITIES.items():
-        slots = await fetch_slots(url)
-        previous_slots[city] = slots  # запоминаем как начальное состояние
-        if slots:
-            formatted = format_slots(slots)
-            blocks.append(f"<b>{city}</b>\n{formatted}")
+        try:
+            slots = await fetch_slots(url)
+            print(f"[DEBUG] {city}: {len(slots)} слотов получено")
+            previous_slots[city] = slots  # сохраняем состояние
+            if slots:
+                formatted = format_slots(slots)
+                blocks.append(f"<b>{city}</b>\n{formatted}")
+            else:
+                blocks.append(f"<b>{city}</b>\nНет доступных слотов.")
+        except Exception as e:
+            print(f"[ERROR] Ошибка при загрузке слотов для {city}: {e}")
+            blocks.append(f"<b>{city}</b>\nОшибка при получении данных.")
     return "\n\n".join(blocks)
 
 async def check_for_new_slots(send_callback):
