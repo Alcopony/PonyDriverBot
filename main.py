@@ -4,7 +4,7 @@ import os
 from aiogram import Bot, Dispatcher, F
 from aiogram.types import Message
 from aiogram.enums import ParseMode
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
 
@@ -23,15 +23,33 @@ dp = Dispatcher()
 @dp.message(CommandStart())
 async def cmd_start(message: Message):
     await add_user(message.from_user.id)
-    await message.answer("Пони подписано!")
+    await message.answer(
+        "✅ Вы подписаны на уведомления о новых слотах для экзамена на водительское удостоверение.\n\n"
+        "Чтобы вручную проверить доступные даты, используйте команду /slots."
+    )
+
+    # Отправим сразу актуальные слоты
+    initial_data = await get_initial_slots()
+    await message.answer(f"📅 <b>Актуальные слоты:</b>\n\n{initial_data}")
+
+    # Выведем список подписчиков в лог
+    users = await get_all_users()
+    print(f"[DEBUG] Зарегистрированные пользователи: {users}")
+
+@dp.message(Command("slots"))
+async def cmd_slots(message: Message):
+    result = await get_initial_slots()
+    await message.answer(f"📅 <b>Актуальные слоты:</b>\n\n{result}")
 
 async def send_to_all_users(text):
     users = await get_all_users()
+    print(f"[DEBUG] Отправляем {len(users)} пользователям сообщение:\n{text}")
     for uid in users:
         try:
-            await bot.send_message(uid, f"📅 {text}")
+            await bot.send_message(uid, f"📢 <b>Новые даты экзаменов!</b>\n\n{text}")
+            print(f"[DEBUG] Успешно отправлено {uid}")
         except Exception as e:
-            print(f"Не удалось отправить сообщение пользователю {uid}: {e}")
+            print(f"[ERROR] Не удалось отправить сообщение пользователю {uid}: {e}")
 
 async def on_startup():
     await init_db()
