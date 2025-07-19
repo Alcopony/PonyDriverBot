@@ -1,23 +1,20 @@
 import aiohttp
 import asyncio
 from datetime import datetime
-from collections import defaultdict
 
 CITIES = {
     "Гори": "https://api-my.sa.gov.ge/api/v1/DrivingLicensePracticalExams2/DrivingLicenseExamsDates2?CategoryCode=4&CenterId=7",
     "Батуми": "https://api-my.sa.gov.ge/api/v1/DrivingLicensePracticalExams2/DrivingLicenseExamsDates2?CategoryCode=4&CenterId=5",
 }
 
-# Для хранения предыдущих результатов
-previous_slots = {
-    city: set() for city in CITIES
-}
+previous_slots = {city: set() for city in CITIES}
 
 def format_slots(slots: set[tuple[str, int]]) -> str:
     rows = []
     for date_str, count in sorted(slots):
         date_obj = datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
-        rows.append(f"{date_obj.strftime('%d.%m.%Y')} ({date_obj.strftime('%A')}): {count} мест")
+        weekday = date_obj.strftime('%A')
+        rows.append(f"{date_obj.strftime('%d.%m.%Y')} ({weekday}): {count} мест")
     return "\n".join(rows)
 
 async def fetch_slots(url):
@@ -25,6 +22,17 @@ async def fetch_slots(url):
         async with session.get(url) as response:
             data = await response.json()
             return {(d['ExamDate'], d['FreePlaceCount']) for d in data}
+
+async def get_initial_slots() -> str:
+    global previous_slots
+    blocks = []
+    for city, url in CITIES.items():
+        slots = await fetch_slots(url)
+        previous_slots[city] = slots  # запоминаем как начальное состояние
+        if slots:
+            formatted = format_slots(slots)
+            blocks.append(f"<b>{city}</b>\n{formatted}")
+    return "\n\n".join(blocks)
 
 async def check_for_new_slots(send_callback):
     global previous_slots
