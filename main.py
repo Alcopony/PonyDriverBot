@@ -35,9 +35,10 @@ async def send_to_all_users(text):
 
 async def on_startup():
     await init_db()
+    print("[DEBUG] Загружаем начальные слоты...")
     initial_data = await get_initial_slots()
-    if initial_data:
-        await send_to_all_users(f"Актуальные слоты:\n\n{initial_data}")
+    print(f"[DEBUG] Слоты загружены:\n{initial_data}")
+    await send_to_all_users(f"Актуальные слоты:\n\n{initial_data}")
     asyncio.create_task(check_for_new_slots(send_to_all_users))
 
 if __name__ == "__main__":
