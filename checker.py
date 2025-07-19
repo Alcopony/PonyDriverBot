@@ -68,4 +68,4 @@ async def check_for_new_slots(send_callback):
                 await send_callback("\n\n".join(combined_updates))
         except Exception as e:
             print(f"Ошибка в checker: {e}")
-        await asyncio.sleep(120)
+        await asyncio.sleep(60)
