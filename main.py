@@ -31,8 +31,14 @@ async def send_to_all_users(text):
 
 async def on_startup():
     await init_db()
+    
+    # Сразу отправим текущие слоты всем пользователям
+    initial_data = await get_initial_slots()
+    if initial_data:
+        await send_to_all_users(f"📅 Актуальные доступные даты:\n\n{initial_data}")
+    
+    # Старт мониторинга
     asyncio.create_task(check_for_new_slots(send_to_all_users))
-
 if __name__ == "__main__":
     dp.startup.register(on_startup)
     dp.run_polling(bot)
