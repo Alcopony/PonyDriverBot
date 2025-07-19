@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from aiogram import Bot, Dispatcher, F
-from aiogram.types import Message
+from aiogram.types import Message , FSInputFile
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.client.default import DefaultBotProperties
@@ -25,8 +25,11 @@ async def cmd_start(message: Message):
     await add_user(message.from_user.id)
 
     # отправка локальной картинки
-    with open("welcome.jpg", "rb") as photo:
-        await bot.send_photo(message.chat.id, photo, caption=(
+    photo = FSInputFile("welcome.jpg")
+    await bot.send_photo(
+        chat_id=message.chat.id,
+        photo=photo,
+        caption=(
             "👋 <b>Добро пожаловать маленькое пони!</b>\n\n"
             "Ты подписалась на уведомления о новых слотах для экзамена на водительское удостоверение.\n\n"
             "📅 Используйте команду /slots чтобы вручную проверить доступные даты."
