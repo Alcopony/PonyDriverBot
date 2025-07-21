@@ -1,6 +1,8 @@
 import aiohttp
 import asyncio
 from datetime import datetime
+from database import get_all_subscribed_users_by_city
+
 
 CITIES = {
     "Гори": "https://api-my.sa.gov.ge/api/v1/DrivingLicensePracticalExams2/DrivingLicenseExamsDates2?CategoryCode=4&CenterId=7",
@@ -65,15 +67,17 @@ async def check_for_new_slots(send_callback):
     global previous_slots
     while True:
         try:
-            combined_updates = []
             for city, url in CITIES.items():
                 new_slots = await fetch_slots(url)
                 if new_slots - previous_slots[city]:
                     previous_slots[city] = new_slots
                     formatted = format_slots(new_slots)
-                    combined_updates.append(f"<b>{city}</b>\n{formatted}")
-            if combined_updates:
-                await send_callback("\n\n".join(combined_updates))
+                    users = await get_all_subscribed_users_by_city(city)
+                    for uid in users:
+                        try:
+                            await send_callback(uid, f"<b>{city}</b>\n{formatted}")
+                        except Exception as e:
+                            print(f"[ERROR] Не удалось отправить сообщение {uid}: {e}")
         except Exception as e:
             print(f"Ошибка в checker: {e}")
         await asyncio.sleep(60)
