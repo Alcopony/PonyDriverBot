@@ -1,3 +1,4 @@
+
 import aiosqlite
 
 DB_PATH = "users.db"
@@ -13,6 +14,17 @@ async def init_db():
             )
         """)
         await db.commit()
+
+async def add_user(user_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT OR IGNORE INTO users (user_id) VALUES (?)", (user_id,))
+        await db.commit()
+
+async def get_all_users():
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("SELECT user_id FROM users")
+        rows = await cursor.fetchall()
+        return [row[0] for row in rows]
 
 async def get_user_subscriptions(user_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
