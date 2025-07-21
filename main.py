@@ -49,8 +49,14 @@ async def cmd_start(message: Message):
     print(f"[DEBUG] Зарегистрированные пользователи: {users}")
 
     # отправим актуальные слоты
+    # отправим актуальные слоты
     initial_data = await get_initial_slots()
     await message.answer(f"📅 <b>Актуальные слоты:</b>\n\n{initial_data}")
+    
+    # сразу предложим выбрать города
+    subs = await get_user_subscriptions(message.from_user.id)
+    kb = get_city_keyboard(subs)
+    await message.answer("🔔 Выберите города для подписки:", reply_markup=kb)
 
     # Выведем список подписчиков в лог
     users = await get_all_users()
