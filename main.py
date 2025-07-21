@@ -11,6 +11,13 @@ from dotenv import load_dotenv
 from database import init_db, add_user, get_all_users
 from checker import check_for_new_slots, get_initial_slots
 
+
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from database import toggle_subscription, get_user_subscriptions
+from checker import CITIES
+
+
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
@@ -47,21 +54,37 @@ async def cmd_start(message: Message):
     # Выведем список подписчиков в лог
     users = await get_all_users()
     print(f"[DEBUG] Зарегистрированные пользователи: {users}")
+def get_city_keyboard(subscribed: list[str]) -> InlineKeyboardMarkup:
+    buttons = []
+    for city in CITIES.keys():
+        is_subscribed = city in subscribed
+        label = f"{'🟢' if is_subscribed else '⚪'} {city}"
+        buttons.append(
+            [InlineKeyboardButton(text=label, callback_data=f"toggle_{city}")]
+        )
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+@dp.message(Command("subscribe"))
+async def cmd_subscribe(message: Message):
+    subs = await get_user_subscriptions(message.from_user.id)
+    kb = get_city_keyboard(subs)
+    await message.answer("🔔 Выберите города для подписки:", reply_markup=kb)
+
+@dp.callback_query(F.data.startswith("toggle_"))
+async def cb_toggle_city(callback: CallbackQuery):
+    city = callback.data.replace("toggle_", "")
+    await toggle_subscription(callback.from_user.id, city)
+    subs = await get_user_subscriptions(callback.from_user.id)
+    kb = get_city_keyboard(subs)
+    await callback.message.edit_text("🔔 Выберите города для подписки:", reply_markup=kb)
+    
 @dp.message(Command("slots"))
 async def cmd_slots(message: Message):
     result = await get_initial_slots()
     await message.answer(f"📅 <b>Актуальные слоты:</b>\n\n{result}")
 
-async def send_to_all_users(text):
-    users = await get_all_users()
-    print(f"[DEBUG] Отправляем {len(users)} пользователям сообщение:\n{text}")
-    for uid in users:
-        try:
-            await bot.send_message(uid, f"📢 <b>Новые даты экзаменов!</b>\n\n{text}")
-            print(f"[DEBUG] Успешно отправлено {uid}")
-        except Exception as e:
-            print(f"[ERROR] Не удалось отправить сообщение пользователю {uid}: {e}")
+async def send_callback(user_id: int, text: str):
+    await bot.send_message(user_id, f"📢 <b>Новые даты:</b>\n\n{text}")
 
 async def on_startup():
     await init_db()
