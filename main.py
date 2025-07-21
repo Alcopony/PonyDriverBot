@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from database import init_db, add_user, get_all_users
 from checker import check_for_new_slots, get_initial_slots
+from checker import fetch_slots, format_slots, previous_slots
 
 
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
@@ -89,10 +90,35 @@ async def send_callback(user_id: int, text: str):
 async def on_startup():
     await init_db()
     print("[DEBUG] Загружаем начальные слоты...")
-    initial_data = await get_initial_slots()
-    print(f"[DEBUG] Слоты загружены:\n{initial_data}")
-    await send_to_all_users(f"Актуальные слоты:\n\n{initial_data}")
-    asyncio.create_task(check_for_new_slots(send_to_all_users))
+    all_slots = {}  # кеш всех городов
+    for city, url in CITIES.items():
+        try:
+            slots = await fetch_slots(url)
+            all_slots[city] = slots
+        except Exception as e:
+            print(f"[ERROR] Ошибка при загрузке слотов {city}: {e}")
+            all_slots[city] = set()
+
+    # Сохраняем в глобальный previous_slots
+    from checker import previous_slots
+    previous_slots.update(all_slots)
+
+    users = await get_all_users()
+    for user_id in users:
+        user_cities = await get_user_subscriptions(user_id)
+        user_text_blocks = []
+        for city in user_cities:
+            city_slots = all_slots.get(city, set())
+            if city_slots:
+                formatted = format_slots(city_slots)
+                user_text_blocks.append(f"<b>{city}</b>\n{formatted}")
+        if user_text_blocks:
+            try:
+                await send_callback(user_id, "📅 <b>Актуальные слоты:</b>\n\n" + "\n\n".join(user_text_blocks))
+            except Exception as e:
+                print(f"[ERROR] Не удалось отправить сообщение {user_id}: {e}")
+
+    asyncio.create_task(check_for_new_slots(send_callback))
 
 if __name__ == "__main__":
     dp.startup.register(on_startup)
